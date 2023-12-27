@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/yeqown/go-qrcode/v2"
 	"github.com/yeqown/go-qrcode/writer/standard"
@@ -10,6 +11,9 @@ import (
 
 func main() {
 	r := gin.Default()
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	r.Use(cors.New(config))
 	r.Static("/assets", "./assets/")
 	r.GET("qr-code", func(ctx *gin.Context) {
 		a := Aluno{"pedro_meu_email@gmail.com", "falksjfdkaj12j31lj2"}
@@ -38,7 +42,7 @@ func main() {
 			return
 		}
 
-		ctx.File(filepath)
+		ctx.FileAttachment(filepath, "qrcode.jpg")
 	})
 	r.Run(":8080")
 }
