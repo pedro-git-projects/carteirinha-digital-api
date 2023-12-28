@@ -156,6 +156,80 @@ func (app *App) createStudentHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+func (app *App) createParentStudentHandler(c *gin.Context) {
+
+	type CreateParentStudentDTO struct {
+		Parent  parent.CreateDTO               `json:"parent" binding:"required"`
+		Student student.CreateParentStudentDTO `json:"student" binding:"required"`
+	}
+	payload := CreateParentStudentDTO{}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	parentHash, err := bcrypt.GenerateFromPassword([]byte(payload.Parent.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash parent password"})
+		return
+	}
+
+	parent := &parent.Parent{
+		Name:  payload.Parent.Name,
+		Email: payload.Parent.Email,
+		Hash:  string(parentHash),
+	}
+
+	if len(payload.Parent.Phones) > 0 {
+		for _, phoneDTO := range payload.Parent.Phones {
+			parent.Phones = append(parent.Phones, phone.Phone{
+				PhoneNumber: phoneDTO.PhoneNumber,
+			})
+		}
+	}
+	err = app.models.Parents.Insert(parent)
+	if err != nil {
+		if err.Error() == `pq: duplicate key value violates unique constraint "parents_email_key"` {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "parent email already taken"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	studentHash, err := bcrypt.GenerateFromPassword([]byte(payload.Student.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash student password"})
+		return
+	}
+
+	student := &student.Student{
+		AcademicRegister: payload.Student.AcademicRegister,
+		Name:             payload.Student.Name,
+		Sex:              payload.Student.Sex,
+		Hash:             string(studentHash),
+		ParentID:         parent.ID,
+	}
+
+	err = app.models.Students.Insert(student)
+	if err != nil {
+		if err.Error() == `pq: duplicate key value violates unique constraint "students_academic_register_key"` {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "student academic register already taken"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := map[string]interface{}{
+		"parent":  parent,
+		"student": student,
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
 func (app *App) signinStudentHandler(c *gin.Context) {
 	payload := student.LoginDTO{}
 
