@@ -6,16 +6,15 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/pedro-git-projects/carteirinha-api/src/data"
 )
 
 type Claims struct {
-	UserID int64      `json:"id"`
-	Role   data.Roles `json:"role"`
+	UserID int64  `json:"id"`
+	Role   string `json:"role"`
 	jwt.StandardClaims
 }
 
-func (app *App) GenerateJWT(userID int64, role data.Roles) (string, error) {
+func (app *App) GenerateJWT(userID int64, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		Role:   role,

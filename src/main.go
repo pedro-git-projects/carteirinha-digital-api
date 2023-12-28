@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	_ "github.com/lib/pq"
 	"github.com/pedro-git-projects/carteirinha-api/src/app"
 )
 
@@ -12,5 +13,7 @@ func main() {
 		log.Fatal(err)
 	}
 	application.RegisterRoutes()
-	application.Run()
+	if err := application.Run(); err != nil {
+		log.Fatal(err.Error())
+	}
 }
