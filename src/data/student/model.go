@@ -13,28 +13,31 @@ type Model struct {
 
 func (m Model) Insert(s *Student) error {
 	query := `
-	INSERT INTO students (username, hash, role)
-	VALUES ($1, $2, $3)
-	RETURNING id, created_at 
+		INSERT INTO students (academic_register, name, sex, hash, role, parent_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, created_at
 	`
-	args := []any{s.username, s.hash, s.role}
-	return m.DB.QueryRow(query, args...).Scan(&s.id, &s.createdAt)
+	args := []any{s.AcademicRegister, s.Name, s.Sex, s.Hash, "student", s.ParentID}
+	return m.DB.QueryRow(query, args...).Scan(&s.ID, &s.CreatedAt)
 }
 
-func (m Model) Authenticate(username, password string) (*Student, error) {
+func (m Model) AuthenticateStudent(academicRegister, password string) (*Student, error) {
 	query := `
-        SELECT id, created_at, username, hash, role 
+        SELECT id, created_at, academic_register, name, sex, hash, role, parent_id
         FROM students
-        WHERE username = $1
+        WHERE academic_register = $1
     `
 
 	student := Student{}
-	err := m.DB.QueryRow(query, username).Scan(
-		&student.id,
-		&student.createdAt,
-		&student.username,
-		&student.hash,
-		&student.role,
+	err := m.DB.QueryRow(query, academicRegister).Scan(
+		&student.ID,
+		&student.CreatedAt,
+		&student.AcademicRegister,
+		&student.Name,
+		&student.Sex,
+		&student.Hash,
+		&student.Role,
+		&student.ParentID,
 	)
 
 	if err == sql.ErrNoRows {
@@ -43,7 +46,7 @@ func (m Model) Authenticate(username, password string) (*Student, error) {
 		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(student.hash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(student.Hash), []byte(password))
 	if err != nil {
 		return nil, errors.New("Invalid password")
 	}
@@ -51,29 +54,29 @@ func (m Model) Authenticate(username, password string) (*Student, error) {
 	return &student, nil
 }
 
-func (m Model) Get(id int64) (*Student, error) {
-	query := `
-		SELECT id, created_at, username, role 
-		FROM users
-		WHERE id = $1
-	`
-
-	student := Student{}
-	err := m.DB.QueryRow(query, id).Scan(
-		&student.id,
-		&student.createdAt,
-		&student.username,
-		&student.role,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, errors.New("Student not found")
-	} else if err != nil {
-		return nil, err
-	}
-
-	return &student, nil
-}
+// func (m Model) Get(id int64) (*Student, error) {
+// 	query := `
+// 		SELECT id, created_at, username, role
+// 		FROM users
+// 		WHERE id = $1
+// 	`
+//
+// 	student := Student{}
+// 	err := m.DB.QueryRow(query, id).Scan(
+// 		&student.id,
+// 		&student.createdAt,
+// 		&student.username,
+// 		&student.role,
+// 	)
+//
+// 	if err == sql.ErrNoRows {
+// 		return nil, errors.New("Student not found")
+// 	} else if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return &student, nil
+// }
 
 // func (m UserModel) Update(id int64, updatedUser *User) (*User, error) {
 // 	existingUser, err := m.Get(id)

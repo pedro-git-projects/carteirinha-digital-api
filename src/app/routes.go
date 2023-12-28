@@ -15,5 +15,8 @@ func (app *App) RegisterRoutes() {
 	}
 
 	app.router.POST("auth/students/signin", app.signinStudentHandler)
+	app.router.POST("auth/parents/signin", app.signinParentHandler)
+	app.router.POST("parent-student", app.createParentStudentHandler)
 	app.router.POST("students", app.createStudentHandler)
+	app.router.POST("parents", app.createParentHandler)
 }
