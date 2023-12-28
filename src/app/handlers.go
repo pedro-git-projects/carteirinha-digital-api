@@ -55,7 +55,7 @@ func (app *App) QRCodeHandler(ctx *gin.Context) {
 		return
 	}
 
-	ctx.FileAttachment(filepath, "qrcode.jpg")
+	ctx.FileAttachment(filepath, fmt.Sprintf("qr-code-%d.jpg", studentID))
 }
 
 func (app *App) createStudentHandler(c *gin.Context) {
