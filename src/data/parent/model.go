@@ -40,7 +40,7 @@ func (m Model) AuthenticateParent(email, password string) (*Parent, error) {
 	query := `
         SELECT id, created_at, name, email, hash, role
         FROM parents
-        WHERE email = $1
+        WHERE id = $1
     `
 
 	parent := Parent{}
