@@ -1,9 +1,11 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/student"
 	"github.com/pedro-git-projects/carteirinha-api/src/validator"
 	"github.com/yeqown/go-qrcode/v2"
@@ -12,21 +14,36 @@ import (
 )
 
 func (app *App) QRCodeHandler(ctx *gin.Context) {
-	s := student.New("pedro_meu_email@gmail.com", "falksjfdkaj12j31lj2")
-
-	jsn, err := s.MarshalJSON()
-	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Failed to marshal struct with error: %v", err)
+	token, ok := ctx.Get("bearer_token")
+	if !ok {
+		ctx.String(http.StatusUnauthorized, "Authentication token not found in the context")
 		return
 	}
 
-	qrc, err := qrcode.New(string(jsn))
+	parsedToken, err := jwt.ParseWithClaims(token.(string), &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(app.config.jwtSecret), nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		ctx.String(http.StatusUnauthorized, "Invalid token")
+		return
+	}
+
+	claims, ok := parsedToken.Claims.(*Claims)
+	if !ok {
+		ctx.String(http.StatusInternalServerError, "Failed to extract claims from token")
+		return
+	}
+
+	studentID := claims.UserID
+
+	qrc, err := qrcode.New(token.(string))
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Failed to generate QR code with error: %v", err)
 		return
 	}
 
-	filepath := "../assets/qr-code.jpg"
+	filepath := fmt.Sprintf("../assets/qr-code-%d.jpg", studentID)
 	w, err := standard.New(filepath)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Failed to create writer with: %v", err)
@@ -38,7 +55,7 @@ func (app *App) QRCodeHandler(ctx *gin.Context) {
 		return
 	}
 
-	ctx.FileAttachment(filepath, "qrcode.jpg")
+	ctx.FileAttachment(filepath, fmt.Sprintf("qr-code-%d.jpg", studentID))
 }
 
 func (app *App) createStudentHandler(c *gin.Context) {

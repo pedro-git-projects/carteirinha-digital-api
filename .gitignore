@@ -2,3 +2,4 @@ assets/**
 !assets/.gitkeep
 .env
 ./postgres-data/**
+postgres-data/

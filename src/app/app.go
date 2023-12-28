@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/pedro-git-projects/carteirinha-api/src/data"
 )
@@ -21,9 +20,6 @@ func NewApp() (*App, error) {
 	}
 
 	r := gin.Default()
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	r.Use(cors.New(config))
 
 	app := &App{
 		config: *cfg,
