@@ -21,7 +21,7 @@ func (m Model) Insert(s *Student) error {
 	return m.DB.QueryRow(query, args...).Scan(&s.ID, &s.CreatedAt)
 }
 
-func (m Model) AuthenticateStudent(academicRegister, password string) (*Student, error) {
+func (m Model) Authenticate(academicRegister, password string) (*Student, error) {
 	query := `
         SELECT id, created_at, academic_register, name, sex, hash, role, parent_id
         FROM students

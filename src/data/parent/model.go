@@ -36,7 +36,7 @@ func (m Model) Insert(parent *Parent) error {
 	return nil
 }
 
-func (m Model) AuthenticateParent(email, password string) (*Parent, error) {
+func (m Model) Authenticate(email, password string) (*Parent, error) {
 	query := `
         SELECT id, created_at, name, email, hash, role
         FROM parents

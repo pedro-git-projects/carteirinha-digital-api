@@ -6,13 +6,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/pedro-git-projects/carteirinha-api/src/data/attendance"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/parent"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/phone"
+	"github.com/pedro-git-projects/carteirinha-api/src/data/staff"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/student"
 	"github.com/yeqown/go-qrcode/v2"
 	"github.com/yeqown/go-qrcode/writer/standard"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func (app *App) healthCheckHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "online"})
+}
 
 func (app *App) QRCodeHandler(ctx *gin.Context) {
 	token, ok := ctx.Get("bearer_token")
@@ -132,13 +138,6 @@ func (app *App) createStudentHandler(c *gin.Context) {
 		ParentID:         payload.ParentID,
 	}
 
-	// v := validator.New()
-	// payload.Validate(v)
-	// if !v.Valid() {
-	// 	c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed validation check"})
-	// 	return
-	// }
-
 	err = app.models.Students.Insert(s)
 	if err != nil {
 		if err.Error() == `pq: duplicate key value violates unique constraint "students_academic_register_key"` {
@@ -238,7 +237,7 @@ func (app *App) signinStudentHandler(c *gin.Context) {
 		return
 	}
 
-	student, err := app.models.Students.AuthenticateStudent(payload.AcademicRegister, payload.Password)
+	student, err := app.models.Students.Authenticate(payload.AcademicRegister, payload.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -265,7 +264,7 @@ func (app *App) signinParentHandler(c *gin.Context) {
 		return
 	}
 
-	parent, err := app.models.Parents.AuthenticateParent(payload.ID, payload.Password)
+	parent, err := app.models.Parents.Authenticate(payload.ID, payload.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -282,4 +281,82 @@ func (app *App) signinParentHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func (app *App) createStaffHandler(c *gin.Context) {
+	payload := staff.CreateDTO{}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	staff := &staff.Staff{
+		Chapa:        payload.Chapa,
+		Name:         payload.Name,
+		Hash:         string(hash),
+		FunctionName: payload.FunctionName,
+		Whatsapp:     payload.Whatsapp,
+	}
+
+	err = app.models.Staff.Insert(staff)
+	if err != nil {
+		if err.Error() == `pq: duplicate key value violates unique constraint "staff_chapa_key"` {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "chapa already taken"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := map[string]interface{}{
+		"staff": staff,
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+func (app *App) signinStaffHandler(c *gin.Context) {
+	payload := staff.SignInDTO{}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	staff, err := app.models.Staff.Authenticate(payload.Chapa, payload.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, err := app.GenerateJWT(staff.ID, staff.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := map[string]interface{}{
+		"token": token,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func registerSchoolEntry(c *gin.Context) {
+	// TODO: GET the student token from the body and the
+	// staff token from the header
+	// if both are valid register the student entry
+	payload := attendance.RegisterStudentEntryDTO{}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 }
