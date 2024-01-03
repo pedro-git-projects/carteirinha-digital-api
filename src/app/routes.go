@@ -12,6 +12,7 @@ func (app *App) RegisterRoutes() {
 	authGroup.Use(app.TokenValidationMiddleware(app.config.jwtSecret))
 	{
 		authGroup.GET("/qr-code", app.QRCodeHandler)
+		authGroup.POST("/record-attendance", app.registerSchoolEntry)
 	}
 
 	app.router.POST("auth/students/signin", app.signinStudentHandler)

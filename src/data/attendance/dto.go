@@ -1,5 +1,5 @@
 package attendance
 
 type RegisterStudentEntryDTO struct {
-	Token string `json:"token"`
+	StudentToken string `json:"student_token" binding:"required"`
 }

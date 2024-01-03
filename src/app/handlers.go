@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -91,13 +92,6 @@ func (app *App) createParentHandler(c *gin.Context) {
 			PhoneNumber: phoneDTO.PhoneNumber,
 		}
 	}
-
-	// v := validator.New()
-	// payload.Validate(v)
-	// if !v.Valid() {
-	// 	c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed validation check"})
-	// 	return
-	// }
 
 	err = app.models.Parents.Insert(p)
 	if err != nil {
@@ -349,14 +343,47 @@ func (app *App) signinStaffHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func registerSchoolEntry(c *gin.Context) {
-	// TODO: GET the student token from the body and the
-	// staff token from the header
-	// if both are valid register the student entry
+func (app *App) registerSchoolEntry(c *gin.Context) {
 	payload := attendance.RegisterStudentEntryDTO{}
-
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	staffTokenString := c.GetHeader("Authorization")
+	if staffTokenString == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Staff token is missing"})
+		return
+	}
+
+	studentClaims, err := app.validateToken(payload.StudentToken, "student")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid student token"})
+		return
+	}
+
+	staffClaims, err := app.validateToken(staffTokenString, "staff")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid staff token"})
+		return
+	}
+
+	if staffClaims.Role != "staff" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient privileges"})
+		return
+	}
+
+	entry := attendance.Attendance{
+		StudentID: studentClaims.UserID,
+		StaffID:   staffClaims.UserID,
+		EntryTime: time.Now(),
+	}
+
+	err = app.models.Attendance.Insert(&entry)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register student entry"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Student entry registered successfully"})
 }

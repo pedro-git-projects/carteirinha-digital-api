@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/pedro-git-projects/carteirinha-api/src/data/attendance"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/parent"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/phone"
 	"github.com/pedro-git-projects/carteirinha-api/src/data/staff"
@@ -13,9 +14,10 @@ import (
 var ErrRecordNotFound = errors.New("Register not found")
 
 type Models struct {
-	Students student.Model
-	Parents  parent.Model
-	Staff    staff.Model
+	Students   student.Model
+	Parents    parent.Model
+	Staff      staff.Model
+	Attendance attendance.Model
 }
 
 func NewModels(db *sql.DB) Models {
@@ -26,6 +28,7 @@ func NewModels(db *sql.DB) Models {
 			DB:         db,
 			PhoneModel: &pm,
 		},
-		Staff: staff.Model{DB: db},
+		Staff:      staff.Model{DB: db},
+		Attendance: attendance.Model{DB: db},
 	}
 }
